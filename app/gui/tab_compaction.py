@@ -24,6 +24,7 @@ class TabCompaction(QWidget):
         self.db = db
         self.selected_object = selected_object
         self.service = DocumentService(db)
+        self._adding_entry = False
         self.init_ui()
     
     def init_ui(self):
@@ -112,6 +113,7 @@ class TabCompaction(QWidget):
         """Загружает существующие записи из базы данных."""
         try:
             print(f"DEBUG: Загрузка записей для объекта: {self.selected_object}")
+            self.table.setRowCount(0)
             # Получаем записи для текущего объекта
             entries = self.db.get_compaction_entries_by_object(self.selected_object['name'])
             print(f"DEBUG: Получено записей: {len(entries)}")
@@ -146,6 +148,9 @@ class TabCompaction(QWidget):
 
     def add_to_table(self):
         """Добавляет запись в таблицу."""
+        if self._adding_entry:
+            return
+        self._adding_entry = True
         work_type = self.work_type_combo.currentText()
         interval = self.interval_input.text().strip()
         start_date = self.start_date_input.date().toPython()
@@ -153,51 +158,54 @@ class TabCompaction(QWidget):
         firm = self.firm_input.text().strip()
         thickness = self.thickness_input.value()
 
-        if not interval or not firm:
-            QMessageBox.warning(self, "Предупреждение", "Введите интервал и фирму")
-            return
+        try:
+            if not interval or not firm:
+                QMessageBox.warning(self, "Предупреждение", "Введите интервал и фирму")
+                return
 
-        # Подготовка данных для сохранения
-        data = {
-            'object_name': self.selected_object['name'],
-            'work_type': work_type,
-            'interval': interval,
-            'start_date': start_date.strftime("%Y-%m-%d"),
-            'end_date': end_date.strftime("%Y-%m-%d"),
-            'firm': firm,
-            'thickness': thickness,
-            'status': 'Ожидает'
-        }
+            # Подготовка данных для сохранения
+            data = {
+                'object_name': self.selected_object['name'],
+                'work_type': work_type,
+                'interval': interval,
+                'start_date': start_date.strftime("%Y-%m-%d"),
+                'end_date': end_date.strftime("%Y-%m-%d"),
+                'firm': firm,
+                'thickness': thickness,
+                'status': 'Ожидает'
+            }
 
-        # Сохраняем в базу данных
-        entry_id = self.db.save_compaction_entry(data)
+            # Сохраняем в базу данных
+            entry_id = self.db.save_compaction_entry(data)
 
-        # Добавляем строку в таблицу
-        row = self.table.rowCount()
-        self.table.insertRow(row)
-        
-        # Чекбокс
-        checkbox_widget = QWidget()
-        checkbox_layout = QHBoxLayout(checkbox_widget)
-        checkbox = QCheckBox()
-        checkbox_layout.addWidget(checkbox)
-        checkbox_layout.setAlignment(Qt.AlignCenter)
-        checkbox_layout.setContentsMargins(0, 0, 0, 0)
-        self.table.setCellWidget(row, 0, checkbox_widget)
-        
-        # Данные
-        self.table.setItem(row, 1, QTableWidgetItem(work_type))
-        self.table.setItem(row, 2, QTableWidgetItem(interval))
-        self.table.setItem(row, 3, QTableWidgetItem(start_date.strftime("%d.%m.%Y")))
-        self.table.setItem(row, 4, QTableWidgetItem(end_date.strftime("%d.%m.%Y")))
-        self.table.setItem(row, 5, QTableWidgetItem(firm))
-        self.table.setItem(row, 6, QTableWidgetItem(str(thickness)))
-        self.table.setItem(row, 7, QTableWidgetItem("Ожидает"))
+            # Добавляем строку в таблицу
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            
+            # Чекбокс
+            checkbox_widget = QWidget()
+            checkbox_layout = QHBoxLayout(checkbox_widget)
+            checkbox = QCheckBox()
+            checkbox_layout.addWidget(checkbox)
+            checkbox_layout.setAlignment(Qt.AlignCenter)
+            checkbox_layout.setContentsMargins(0, 0, 0, 0)
+            self.table.setCellWidget(row, 0, checkbox_widget)
+            
+            # Данные
+            self.table.setItem(row, 1, QTableWidgetItem(work_type))
+            self.table.setItem(row, 2, QTableWidgetItem(interval))
+            self.table.setItem(row, 3, QTableWidgetItem(start_date.strftime("%d.%m.%Y")))
+            self.table.setItem(row, 4, QTableWidgetItem(end_date.strftime("%d.%m.%Y")))
+            self.table.setItem(row, 5, QTableWidgetItem(firm))
+            self.table.setItem(row, 6, QTableWidgetItem(str(thickness)))
+            self.table.setItem(row, 7, QTableWidgetItem("Ожидает"))
 
-        # Очищаем форму
-        self.interval_input.clear()
-        self.firm_input.clear()
-        self.thickness_input.setValue(0)
+            # Очищаем форму
+            self.interval_input.clear()
+            self.firm_input.clear()
+            self.thickness_input.setValue(0)
+        finally:
+            self._adding_entry = False
 
     def generate_compaction_conclusion(self):
         """Генерирует заключение на уплотнение."""

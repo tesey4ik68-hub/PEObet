@@ -33,6 +33,3 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.tab_compaction, "Уплотнение")
         
         self.setCentralWidget(self.tabs)
-        
-        # Загружаем записи после создания вкладок
-        self.tab_compaction.load_existing_entries()
